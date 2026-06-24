@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>인공지능 일반 - 마스터 퀴즈 앱</title>
+    <style>
+        :root {
+            /* 차분하고 세련된 네이비/슬레이트 다크 테마 */
+            --primary: #22d3ee;
+            --primary-hover: #06b6d4;
+            --bg-dark: #1e293b;
+            --card-bg: #334155;
+            --text-main: #f8fafc;
+            --text-dim: #cbd5e1;
+            --correct: #10b981;
+            --wrong: #f43f5e;
+            --btn-bg: #475569;
+            --btn-hover: #64748b;
+            --overlay-bg: rgba(30, 41, 59, 0.9);
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Pretendard', 'Malgun Gothic', sans-serif;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 500px;
+            min-height: 100vh;
+            background: var(--card-bg);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @media (min-width: 500px) {
+            body { align-items: center; }
+            .app-container {
+                min-height: auto;
+                height: 90vh;
+                border-radius: 20px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            }
+        }
+
+        /* 뷰 전환 효과 */
+        .view {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 30px 24px;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease-in-out;
+            pointer-events: none;
+            overflow-y: auto;
+        }
+
+        .view.active {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+        }
+
+        .word-break-syllable {
+            word-break: break-all;
+        }
+
+        /* 버튼 공통 */
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .btn:active { transform: scale(0.98); }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), #3b82f6);
+            color: #0f172a;
+        }
+
+        .btn-secondary {
+            background: var(--btn-bg);
+            color: var(--text-main);
+        }
+        
+        .btn-secondary:hover { background: var(--btn-hover); }
+
+        /* 모두 풀기 버튼 강조 (배경은 같고 글씨만 크고 굵게) */
+        .btn-all {
+            font-weight: 900;
+            font-size: 1.15rem;
+            letter-spacing: 1px;
+        }
+
+        .btn-next {
+            background: var(--btn-bg);
+            color: var(--primary);
+            font-weight: 900;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+        }
+
+        /* --- Welcome View (시작 화면 꽉 찬 레이아웃) --- */
+        .welcome-wrapper {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            justify-content: space-between; 
+        }
+        
+        .welcome-top { text-align: center; }
+        .welcome-top h1 { font-size: 2.4rem; margin: 0; line-height: 1.3; }
+        
+        .welcome-image {
+            width: 100%; 
+            max-width: 320px; 
+            flex-grow: 1; 
+            object-fit: cover;
+            min-height: 0; 
+            border-radius: 20px;
+            margin: 24px auto; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.05); 
+            display: block; 
+        }
+
+        .welcome-bottom {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .disclaimer-box {
+            background: rgba(0, 0, 0, 0.15); border: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: 4px solid var(--primary); border-radius: 12px; padding: 18px;
+            margin-bottom: 24px; width: 100%; text-align: left; 
+        }
+        .disclaimer-text { color: var(--text-dim); font-size: 0.95rem; line-height: 1.5; margin: 0; word-break: break-all; }
+        
+        .footer-text { font-size: 0.75rem; color: var(--text-dim); opacity: 0.6; margin-top: 16px; text-align: center; letter-spacing: 0.5px; }
+
+        /* --- Mode Select View --- */
+        .mode-select-view { justify-content: center; align-items: center; text-align: center; }
+        .mode-select-view h2 { font-size: 2rem; margin: 0 0 15px 0; line-height: 1.3; }
+        .mode-select-view p { color: var(--text-dim); line-height: 1.5; margin-bottom: 40px; font-size: 1rem; }
+        .mode-selection { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; }
+
+        /* --- Quiz View (퀴즈 화면 꽉 찬 레이아웃) --- */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-shrink: 0; }
+        .btn-home {
+            background: transparent; border: 1px solid var(--text-dim); color: var(--text-dim);
+            padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+        }
+        .btn-home:hover { border-color: var(--primary); color: var(--primary); }
+        .q-number-box { display: flex; align-items: baseline; gap: 8px; }
+        .q-number { font-size: 1.8rem; font-weight: 800; color: var(--primary); margin: 0; }
+        .progress-text { color: var(--text-dim); font-weight: 600; font-size: 0.9rem; }
+
+        .progress-bar-bg { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-bottom: 24px; flex-shrink: 0; }
+        .progress-bar-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s ease; }
+
+        .question-box {
+            background: rgba(0,0,0,0.2); padding: 24px; border-radius: 12px;
+            margin-bottom: 24px; border: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;
+        }
+        .question-text { font-size: 1.2rem; line-height: 1.6; margin: 0; }
+
+        /* 선지 컨테이너가 남는 공간을 채우며 유동적으로 정렬됨 */
+        .options-list { 
+            display: flex; flex-direction: column; justify-content: center;
+            gap: 12px; margin-bottom: 20px; flex-grow: 1; 
+        }
+        
+        .option-btn {
+            position: relative; background: var(--btn-bg); color: var(--text-main);
+            border: 2px solid transparent; padding: 16px 18px; border-radius: 10px;
+            text-align: left; font-size: 1.05rem; cursor: pointer; transition: all 0.2s; line-height: 1.4;
+        }
+        
+        /* 1. 내가 고른 답 (확인 전) */
+        .option-btn.selected { 
+            background: rgba(34, 211, 238, 0.1); 
+            border-color: var(--primary); 
+            color: var(--primary); 
+        }
+        
+        /* 2. 실제 정답 (확인 후 팝업 애니메이션) */
+        @keyframes correctPop {
+            0%   { transform: scale(1); }
+            40%  { transform: scale(1.03); background: rgba(34, 211, 238, 0.25); border-color: var(--primary); color: #fff; }
+            100% { transform: scale(1); background: rgba(34, 211, 238, 0.15); border-color: var(--primary); color: var(--primary); }
+        }
+        .option-btn.is-correct-anim { 
+            animation: correctPop 0.5s ease-out forwards; 
+            font-weight: 700; 
+            z-index: 10; 
+        }
+
+        /* 3. 내가 고른 오답 (확인 후 부드럽게 흔들리며 붉은색으로 변함) */
+        @keyframes wrongFade {
+            0%   { transform: scale(1); }
+            20%  { transform: translateX(-2px); }
+            60%  { transform: translateX(2px); }
+            100% { 
+                transform: translateX(0); 
+                background: rgba(244, 63, 94, 0.08); 
+                border-color: rgba(244, 63, 94, 0.4); 
+                color: var(--wrong); 
+                opacity: 0.6; 
+            }
+        }
+        .option-btn.is-wrong-anim {
+            animation: wrongFade 0.4s ease-out forwards;
+        }
+
+        .option-btn.disabled { pointer-events: none; }
+
+        /* 주관식 입력 필드 */
+        .short-answer-box {
+            width: 100%; margin-bottom: 20px; display: none; flex-grow: 1; align-items: center;
+        }
+        .short-answer-input {
+            width: 100%; padding: 20px; font-size: 1.2rem; border-radius: 10px;
+            border: 2px solid var(--btn-bg); background: rgba(0,0,0,0.2); color: #fff;
+            text-align: center; font-weight: 600; outline: none; transition: all 0.3s;
+        }
+        .short-answer-input:focus { border-color: var(--primary); background: rgba(34, 211, 238, 0.05); }
+        .short-answer-input.is-correct { border-color: var(--correct); background: rgba(16, 185, 129, 0.1); color: var(--correct); }
+        .short-answer-input.is-wrong { border-color: var(--wrong); background: rgba(244, 63, 94, 0.1); color: var(--wrong); }
+
+        .bottom-actions { display: flex; flex-direction: column; width: 100%; flex-shrink: 0; }
+        .action-row { display: flex; gap: 10px; margin-bottom: 15px; }
+        .explanation-box {
+            display: none; background: rgba(34, 211, 238, 0.08); border-left: 4px solid var(--primary);
+            padding: 16px; border-radius: 8px; margin-bottom: 15px; font-size: 0.95rem; line-height: 1.5; color: #e2e8f0;
+        }
+        .explanation-box.show { display: block; animation: fadeIn 0.3s; }
+        .controls { display: flex; gap: 10px; }
+        .controls .btn { padding: 14px; font-size: 1rem; }
+
+        /* --- Confirm Dialog --- */
+        .confirm-dialog-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--overlay-bg);
+            display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        .confirm-dialog-overlay.active { opacity: 1; pointer-events: auto; }
+        .confirm-dialog {
+            background: var(--card-bg); border: 1px solid rgba(255,255,255,0.1); padding: 24px; border-radius: 16px;
+            text-align: center; width: 80%; max-width: 350px; transform: scale(0.9); transition: transform 0.3s ease; box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+        }
+        .confirm-dialog-overlay.active .confirm-dialog { transform: scale(1); }
+        .confirm-dialog p { font-size: 1.1rem; font-weight: 600; margin: 0 0 24px 0; color: var(--text-main); }
+        .confirm-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        /* --- Result View --- */
+        .result-view { text-align: center; justify-content: center; }
+        .score-circle {
+            width: 150px; height: 150px; border-radius: 50%; background: conic-gradient(var(--primary) 0%, rgba(255,255,255,0.1) 0%);
+            display: flex; justify-content: center; align-items: center; margin: 0 auto 40px auto; position: relative;
+        }
+        .score-circle::before { content: ''; position: absolute; width: 130px; height: 130px; background: var(--card-bg); border-radius: 50%; }
+        .score-text { position: relative; font-size: 2.5rem; font-weight: 800; color: var(--primary); }
+        .score-text span { font-size: 1.1rem; color: var(--text-dim); font-weight: 600; }
+        .result-message { font-size: 1.2rem; margin-bottom: 40px; color: var(--text-main); word-break: keep-all; line-height: 1.4; }
+        .action-buttons { display: flex; flex-direction: column; gap: 12px; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    
+    <div id="welcomeView" class="view active">
+        <div class="welcome-wrapper">
+            <div class="welcome-top">
+                <h1>인공지능 일반<br>학습 평가</h1>
+            </div>
+            
+            <img src="logo.jpg" alt="인공지능 메인 이미지" class="welcome-image">
+            
+            <div class="welcome-bottom">
+                <div class="disclaimer-box">
+                    <p class="disclaimer-text">문항에 오류가 있을 수 있으며, 어디까지나 학습한 내용을 복습하기 위한 용도로 활용하세요. 이와 관련한 모든 결과에 대한 책임은 사용자 스스로 집니다.</p>
+                </div>
+                <button class="btn btn-primary" onclick="app.showModeSelect()">시작하기</button>
+                <div class="footer-text">담임은 여러분들의 성장을 응원합니다 made by kimjongho</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modeSelectView" class="view mode-select-view">
+        <h2>문항 선택</h2>
+        <p>풀이할 문항 수를 선택해 주세요.<br>서술형은 자동 키워드 채점을 지원합니다.</p>
+        <div class="mode-selection">
+            <button class="btn btn-secondary" onclick="app.startQuiz('20')">20문항 풀기</button>
+            <button class="btn btn-secondary" onclick="app.startQuiz('30')">30문항 풀기</button>
+            <button class="btn btn-secondary" onclick="app.startQuiz('40')">40문항 풀기</button>
+            <button class="btn btn-secondary" onclick="app.startQuiz('50')">50문항 풀기</button>
+            <button class="btn btn-secondary" onclick="app.startQuiz('short')">서술형 10문항</button>
+            <button class="btn btn-secondary btn-all" onclick="app.startQuiz('all')">모두 풀기</button>
+        </div>
+    </div>
+
+    <div id="quizView" class="view">
+        <div id="confirmDialogOverlay" class="confirm-dialog-overlay">
+            <div class="confirm-dialog">
+                <p>처음으로 돌아갈까요?</p>
+                <div class="confirm-buttons">
+                    <button class="btn btn-secondary" onclick="app.resetApp()">예</button>
+                    <button class="btn btn-primary" onclick="app.closeConfirmDialog()">아니오</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="header">
+            <button class="btn-home" onclick="app.showConfirmDialog()">처음으로</button>
+            <div class="q-number-box"><h2 id="qNumber" class="q-number">Q1</h2></div>
+            <div class="progress-text"><span id="currentQNum">1</span> / <span id="totalQNum">10</span></div>
+        </div>
+        
+        <div class="progress-bar-bg"><div id="progressBar" class="progress-bar-fill"></div></div>
+
+        <div class="question-box">
+            <h3 id="questionText" class="question-text word-break-syllable"></h3>
+        </div>
+
+        <div id="optionsContainer" class="options-list word-break-syllable"></div>
+        
+        <div id="shortAnswerContainer" class="short-answer-box">
+            <input type="text" id="shortAnswerInput" class="short-answer-input" placeholder="정답 어휘를 입력하세요." 
+                   autocomplete="off" autocorrect="off" spellcheck="false" autocapitalize="off">
+        </div>
+
+        <div class="bottom-actions">
+            <div class="action-row">
+                <button class="btn btn-outline" id="checkAnswerBtn" onclick="app.checkImmediateAnswer()">정답 바로 확인하기</button>
+                <button class="btn btn-outline" id="viewExplanationBtn" onclick="app.toggleExplanation()" style="display: none;">해설보기</button>
+            </div>
+            <div id="explanationBox" class="explanation-box word-break-syllable"></div>
+            <div class="controls">
+                <button class="btn btn-secondary" id="backBtn" onclick="app.prevQuestion()">이전</button>
+                <button class="btn btn-secondary" id="skipBtn" onclick="app.skipQuestion()">건너뛰기</button>
+                <button class="btn btn-secondary btn-next" id="nextBtn" onclick="app.nextQuestion()">다음</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="resultView" class="view result-view">
+        <div class="score-circle" id="scoreCircle"><div class="score-text" id="scoreText">0<span>점</span></div></div>
+        <h2 id="resultMessage" class="result-message">수고하셨습니다.</h2>
+        <div class="action-buttons">
+            <button class="btn btn-outline" id="retryWrongBtn" onclick="app.startRetryMode()" style="display: none;">틀린 문제 다시 풀기</button>
+            <button class="btn btn-secondary" onclick="app.resetApp()">처음 화면으로</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // [객관식 50 + 서술형 10 = 총 60문항 데이터베이스]
+    const quizDatabase = [
+        { id: 1, type: "mcq", question: "시각, 학습, 추론 등 인간의 지능을 컴퓨터가 모방하여 실행하도록 구현하는 모든 기술을 의미하는 용어는?", options: ["자동 제어 기술", "일괄 처리 구조", "인공지능(AI)", "임베디드 프로세싱", "유비쿼터스 시스템"], answerIndex: 2, explanation: "인간의 지능을 컴퓨터가 모방하여 실행하도록 구현하는 기술은 '인공지능(AI)'입니다. [출처: 교과서 9쪽]" },
+        { id: 2, type: "mcq", question: "1956년 미국 다트머스 대학교에서 열린 회의에서 '인공지능'이라는 용어를 처음으로 제안한 인물은?", options: ["얀르쿤", "마빈 민스키", "제프리 힌턴", "프랭크 로젠블랫", "존 매카시"], answerIndex: 4, explanation: "1956년 존 매카시 교수가 인공지능 용어를 최초로 제안하였습니다. [출처: 교과서 9쪽]" },
+        { id: 3, type: "mcq", question: "다음 중 '약한 인공지능(Weak AI)'의 주요 특징으로 가장 올바른 것은?", options: ["자아 정체성을 명확히 가지고 스스로 생각한다.", "인간의 두뇌 동작 메커니즘을 완벽하게 재현한다.", "자율적인 의사 결정을 수행한다.", "새로운 규칙을 스스로 창조한다.", "특정 분야에서 주어진 문제나 상황을 진단하고 해결하는 데 도움을 준다."], answerIndex: 4, explanation: "약한 인공지능은 특정 분야에서 상황을 진단하고 해결하는 데 도움을 줍니다. [출처: 교과서 9쪽]" },
+        { id: 4, type: "mcq", question: "스마트폰이나 인공지능 스피커 등에서 사용되는 대표적인 인공지능 일상 서비스로 보기 어려운 것은?", options: ["시리(Siri)", "누구(Nugu)", "빅스비(Bixby)", "클로바(Clova)", "알파고(AlphaGo)"], answerIndex: 4, explanation: "알파고는 일상 비서가 아닌 바둑 전용 인공지능 서비스입니다. [출처: 교과서 9쪽]" },
+        { id: 5, type: "mcq", question: "인공지능은 수많은 데이터를 학습한다. 이때 사용되는 [     ]에 따라 인공지능의 성능에 영향을 준다.", options: ["자료형", "변수명", "알고리즘", "라이브러리", "파싱 트리"], answerIndex: 2, explanation: "적용되는 '알고리즘'의 형태에 따라 인공지능 성능이 결정됩니다. [출처: 교과서 9쪽]" },
+        { id: 6, type: "mcq", question: "알고리즘을 이용하여 데이터를 분석하고 분석 결과를 스스로 학습한 후, 이를 기반으로 어떠한 판단이나 예측을 하는 기술은?", options: ["전문가 규칙 시스템", "일괄 처리 프로세싱", "순차 프로그래밍 구조", "하드웨어 최적화 연산", "기계학습(Machine Learning)"], answerIndex: 4, explanation: "스스로 학습한 후 예측하는 기술을 '기계학습'이라고 합니다. [출처: 교과서 11쪽]" },
+        { id: 7, type: "mcq", question: "다음 중 기계학습의 3대 분류 유형에 속하지 않는 것은?", options: ["지도 학습", "강화 학습", "비지도 학습", "심층 네트워크 학습", "정답 없음"], answerIndex: 3, explanation: "기계학습은 지도, 비지도, 강화 학습 3가지로만 분류됩니다. [출처: 교과서 11쪽]" },
+        { id: 8, type: "mcq", question: "기계학습 유형 중 '문제와 정답으로 구성된 데이터'를 컴퓨터에 학습시키는 방법은?", options: ["강화 학습", "비지도 학습", "비정형 군집화 학습", "보상 기반 최적화 학습", "지도 학습(Supervised Learning)"], answerIndex: 4, explanation: "정답(레이블)과 함께 컴퓨터에 학습시키는 방법은 '지도 학습'입니다. [출처: 교과서 11쪽]" },
+        { id: 9, type: "mcq", question: "인간의 뇌 뉴런과 비슷한 인공 신경망 방식을 기반으로 구축된 기계학습의 한 종류는?", options: ["전문가 시스템", "딕셔너리 파싱", "단층 퍼셉트론 기법", "관계형 데이터베이스", "딥러닝(Deep Learning)"], answerIndex: 4, explanation: "인공 신경망 방식으로 정보를 처리하는 기술은 '딥러닝'입니다. [출처: 교과서 13쪽]" },
+        { id: 10, type: "mcq", question: "1958년 로젠블랫이 제시하였으며 하나의 입력층과 하나의 출력층으로 구성된 가장 단순한 형태의 알고리즘은?", options: ["LeNet-5", "심층 신경망(DNN)", "합성곱 신경망(CNN)", "알렉스넷(AlexNet)", "퍼셉트론(Perceptron)"], answerIndex: 4, explanation: "인공 신경망의 기원은 로젠블랫이 제시한 '퍼셉트론'입니다. [출처: 교과서 13쪽]" },
+        { id: 11, type: "mcq", question: "단층 퍼셉트론 중간에 은닉층을 2개 이상 추가하여 복잡한 패턴을 다루도록 제안된 신경망 구조는?", options: ["이진 회로망", "단층 분류망", "임베디드 시퀀스망", "심층 신경망(DNN)", "순환 신경망(RNN)"], answerIndex: 3, explanation: "은닉층을 2개 이상 추가한 구조를 '심층 신경망(DNN)'이라 합니다. [출처: 교과서 13쪽]" },
+        { id: 12, type: "mcq", question: "2012년에 등장하였으며 이미지에서 필요한 특징을 스스로 학습할 수 있어 이미지 분류에 널리 사용되는 신경망 구조는?", options: ["확률 통계망", "단층 퍼셉트론", "순환 신경망(RNN)", "합성곱 신경망(CNN)", "데이터 시각화 프레임워크"], answerIndex: 3, explanation: "이미지 분류 작업에 널리 활용된 기술은 '합성곱 신경망(CNN)'입니다. [출처: 교과서 13쪽]" },
+        { id: 13, type: "mcq", question: "소프트웨어 개발 시 편의성을 제공하며 현재 가장 널리 사용되는 G사의 대표적인 딥러닝 라이브러리는?", options: ["Pandas", "Python", "Open API", "Matplotlib", "TensorFlow"], answerIndex: 4, explanation: "G사가 공개한 대표적인 라이브러리는 '텐서플로(TensorFlow)'입니다. [출처: 교과서 13쪽]" },
+        { id: 14, type: "mcq", question: "기계학습과 딥러닝의 가장 결정적인 차이점으로 분류되는 것은?", options: ["프로그래밍 언어의 종류", "연산 속도의 물리적 한계", "사용하는 데이터의 크기", "하드웨어 메모리 제약", "사람의 개입 여부"], answerIndex: 4, explanation: "두 기술의 가장 큰 차이점은 특징 추출 자동화 여부인 '사람의 물리적 개입 여부'입니다. [출처: 교과서 13쪽]" },
+        { id: 15, type: "mcq", question: "운전자의 조작 없이 자동차가 스스로 주변 환경을 인식하고 판단하여 주행하는 시스템은?", options: ["이진 제어 차량", "자동 수송 공정", "원격 제어 자동차", "자율 주행 자동차", "가상 셔틀 시스템"], answerIndex: 3, explanation: "스스로 판단 주행이 가능한 차량을 '자율 주행 자동차'라 합니다. [출처: 교과서 23쪽]" },
+        { id: 16, type: "mcq", question: "자율 주행 자동차 센서 중 레이저를 발사하고 반사 신호를 측정하여 3차원 도로 정보를 얻는 장치는?", options: ["GPS", "초음파 센서", "적외선 센서", "라이다(LiDAR)", "관성 항법장치"], answerIndex: 3, explanation: "레이저를 이용해 도로 정보를 정밀 획득하는 장치는 '라이다(LiDAR)'입니다. [출처: 교과서 23쪽]" },
+        { id: 17, type: "mcq", question: "자율 주행 자동차가 차량 혹은 도로 인프라 간 실시간 통신하기 위한 핵심 기술 요소는?", options: ["파싱 트리", "HD Map", "V2X 통신", "라벨링 시스템", "들여쓰기 블록"], answerIndex: 2, explanation: "차량 및 인프라 간 통신 핵심 요소는 'V2X 통신'입니다. [출처: 교과서 23쪽]" },
+        { id: 18, type: "mcq", question: "외부 환경을 인식하여 사람의 감정을 인식하고 시공간적 세계를 인지하여 교류하는 기술은?", options: ["언어 이해 기술", "시각 이해 기술", "상황 이해 기술", "데이터 탐색 기법", "데이터 시각화 기술"], answerIndex: 2, explanation: "감정과 시공간적 세계를 인지해 교류하는 기술은 '상황 이해 기술'입니다. [출처: 교과서 27쪽]" },
+        { id: 19, type: "mcq", question: "생물의 신경망 구조를 하드웨어적으로 모사하여 가동하는 효율적인 컴퓨팅 방식은?", options: ["클라우드 컴퓨팅", "임베디드 시퀀싱", "가상화 병렬 연산", "동기식 데이터 뱅킹", "뉴로모픽 컴퓨팅"], answerIndex: 4, explanation: "하드웨어 칩 구조를 뇌처럼 모사한 방식은 '뉴로모픽 컴퓨팅'입니다. [출처: 교과서 27쪽]" },
+        { id: 20, type: "mcq", question: "인터넷 정보 중 부정확한 오류를 식별하고 응답의 타당성을 검토하는 핵심 역량은?", options: ["학습 민첩성", "비판적 사고력", "디지털 리터러시", "커뮤니케이션 능력", "창의적 문제 해결 능력"], answerIndex: 1, explanation: "논리적 오류와 타당성을 검토하는 역량은 '비판적 사고력'입니다. [출처: 교과서 28쪽]" },
+        { id: 21, type: "mcq", question: "가짜뉴스 양산을 조심하고 데이터의 편견을 주의하기 위해 강력히 요구되는 역량 요소는?", options: ["직업 윤리", "학습 민첩성", "디지털 활용 능력", "시각적 표현 능력", "커뮤니케이션 기술"], answerIndex: 0, explanation: "가짜뉴스 양산을 막기 위해 요구되는 도덕적 역량은 '직업 윤리'입니다. [출처: 교과서 28쪽]" },
+        { id: 22, type: "mcq", question: "데이터 수집, 처리 단계에서 대표성이나 공정성이 왜곡되어 치우치는 성질을 뜻하는 용어는?", options: ["데이터 파싱 실패", "데이터 튜닝 지연", "데이터 시각화 오류", "데이터 프레임 분실", "데이터 편향성(Data Bias)"], answerIndex: 4, explanation: "공정성이 왜곡되어 치우친 성질을 '데이터 편향성'이라 부릅니다. [출처: 교과서 34쪽]" },
+        { id: 23, type: "mcq", question: "인공지능 편향성을 줄이기 위해 치우침을 객관적으로 평가할 때 요구되는 두 가지 알고리즘은?", options: ["매개변수, 활성화 함수", "분류, 회귀 알고리즘", "추적, 감시 알고리즘", "정렬, 검색 알고리즘", "파싱, 임베딩 알고리즘"], answerIndex: 2, explanation: "데이터와 변수 편향성을 점검하기 위해 '추적 알고리즘과 감시 알고리즘'이 필요합니다. [출처: 교과서 34쪽]" },
+        { id: 24, type: "mcq", question: "영화 '아이, 로봇'에서 인간의 최종 제어 권한과 통제성의 원칙을 인정한 캐릭터는?", options: ["비키", "써니", "시리", "자비스", "알파고"], answerIndex: 1, explanation: "인간의 통제 권한 및 파트너 관계를 인정한 캐릭터는 '써니'입니다. [출처: 교과서 34쪽]" },
+        { id: 25, type: "mcq", question: "인공지능 윤리기준 3대 기본 원칙에 해당하지 않는 것은?", options: ["인간의 존엄성 원칙", "사회의 공공성 원칙", "기술의 합목적성 원칙", "이용자 중심 자율적 차별 원칙", "해당 없음"], answerIndex: 3, explanation: "3대 기본 원칙은 인간 존엄성, 사회 공공성, 기술 합목적성입니다. [출처: 교과서 35쪽]" },
+        { id: 26, type: "mcq", question: "개인 정보의 악용을 차단하여 신뢰성을 확보하기 위한 인공지능 윤리기준 요건은?", options: ["투명성", "연대성", "책임성", "다양성 존중", "프라이버시 보호"], answerIndex: 4, explanation: "개인정보 보호와 안전한 관리를 다루는 요건은 '프라이버시 보호'입니다. [출처: 교과서 35쪽]" },
+        { id: 27, type: "mcq", question: "사고 등의 책임 분배를 명확히 하고 사회적 의무를 충실히 수행해야 한다는 윤리 원칙은?", options: ["공공성", "책무성", "통제성", "투명성", "안전성"], answerIndex: 1, explanation: "사고 책임 명확화 및 의무 충실 수행 원칙은 '책무성'입니다. [출처: 교과서 35쪽]" },
+        { id: 28, type: "mcq", question: "예상되는 위험 정보를 공개, 공유하고 처리 과정이 적절히 이루어져야 한다는 원칙은?", options: ["공공성", "책무성", "통제성", "투명성", "안전성"], answerIndex: 3, explanation: "위험 정보를 공개하고 공유를 유도하는 원칙은 '투명성'입니다. [출처: 교과서 35쪽]" },
+        { id: 29, type: "mcq", question: "미리 정해진 구조에 따라 저장되며 엑셀 시트나 관계형 DB 테이블이 대표적인 데이터는?", options: ["반정형 데이터", "비정형 데이터", "연속형 데이터", "범주형 데이터", "정형 데이터"], answerIndex: 4, explanation: "고정된 행과 열에 저장되는 데이터를 '정형 데이터'라고 합니다. [출처: 교과서 46쪽]" },
+        { id: 30, type: "mcq", question: "구조에 대한 설명이 데이터 안에 함께 존재하여 파싱(Parsing) 과정이 필수적인 데이터는?", options: ["정형 데이터", "비정형 데이터", "연속형 데이터", "범주형 데이터", "반정형 데이터"], answerIndex: 4, explanation: "설명이 내장되어 파싱 구문 분석이 요구되는 유형은 '반정형 데이터'입니다. [출처: 교과서 46쪽]" },
+        { id: 31, type: "mcq", question: "다음 중 교과서에서 제시한 반정형 데이터(Semi-structured Data)의 대표적인 예시로만 바르게 짝지어진 것은?", options: ["동영상 파일, 음성 녹음", "로그 테이블, 정형 쿼리", "엑셀 스프레드시트, 관계형 DB", "소셜 미디어 텍스트, 워드 파일", "HTML, XML, JSON 문서"], answerIndex: 4, explanation: "웹 환경 데이터 교환 포맷인 HTML, XML, JSON 문서는 반정형 데이터의 대표 사례입니다. [출처: 교과서 46쪽]" },
+        { id: 32, type: "mcq", question: "정해진 구조가 없이 저장되는 데이터로 의미를 쉽게 파악하기 힘들고 내용에 대한 질의 처리가 어려우며, 텍스트, 음성, 영상 등이 해당하는 데이터 종류는?", options: ["정형 데이터", "스프레드시트", "반정형 데이터", "인덱싱 데이터", "비정형 데이터(Unstructured Data)"], answerIndex: 4, explanation: "뼈대 양식 없이 원본 보존되는 미디어나 텍스트는 '비정형 데이터'입니다. [출처: 교과서 46쪽]" },
+        { id: 33, type: "mcq", question: "누구나 사용할 수 있도록 공개된 프로그래밍 인터페이스를 뜻하며, 공통으로 활용될 수 있는 오픈 시스템 규격은?", options: ["ETL 기술", "RSS 피드", "Open API", "크롤링(Crawling)", "스트리밍(Streaming)"], answerIndex: 2, explanation: "안전하게 연동할 수 있게 개방된 인터페이스 모듈 명칭은 'Open API'입니다. [출처: 교과서 47쪽]" },
+        { id: 34, type: "mcq", question: "다양한 웹 사이트로부터 데이터를 직접 수집하는 기술로, 컴퓨터가 자동으로 수집하도록 프로그래밍되는 기술은?", options: ["동기식 스트리밍", "파싱 트리 분해", "FTP 파일 전송", "크롤링(Crawling)", "데이터베이스 테이블 결합"], answerIndex: 3, explanation: "웹 사이트 상의 자료를 프로그램으로 자동 수집하는 방식은 '크롤링(Crawling)'입니다. [출처: 교과서 47쪽]" },
+        { id: 35, type: "mcq", question: "데이터 모델에 적용하기 전에 원본 데이터를 목적에 적합하도록 정리하고 가공하여 품질을 높이는 과정은?", options: ["결과 해석", "데이터 모델링", "데이터 시각화", "데이터 웹 수집", "데이터 전처리(Data Preprocessing)"], answerIndex: 4, explanation: "규격에 맞게 미리 정제하고 클렌징하는 단계를 '데이터 전처리'라고 합니다. [출처: 교과서 55쪽]" },
+        { id: 36, type: "mcq", question: "데이터 수집 과정에서 장비 오류나 누락 등으로 인해 정상적으로 확보하지 못한 공백 값을 뜻하는 용어는?", options: ["이상치", "임계값", "바이어스", "매개변수", "결측치(Missing Values)"], answerIndex: 4, explanation: "확보하지 못한 누락 공백 데이터는 '결측치'라고 정의합니다. [출처: 교과서 55쪽]" },
+        { id: 37, type: "mcq", question: "정상적인 분포 범위 밖에 위치하는 값으로 측정 오류에 의해 발생한 비정상적인 값을 지칭하는 용어는?", options: ["결측치", "구문 트리", "동기 데이터", "문자열 토큰", "이상치(Outliers)"], answerIndex: 4, explanation: "유효 범위를 이탈하여 독자적으로 위치하는 오류 현상값은 '이상치'입니다. [출처: 교과서 55쪽]" },
+        { id: 38, type: "mcq", question: "파이썬 언어가 문법 특징상 블록(하위 실행 영역)을 구분하기 위해 필수적으로 요구하는 문법적 특징은?", options: ["주석문 선언 기호", "자료형 타입 명시", "예약어의 대문자화", "세미콜론 강제 표기", "들여쓰기(Indent)"], answerIndex: 4, explanation: "파이썬은 중괄호 대신 공백 단위의 '들여쓰기(Indent)'를 이용하여 블록을 구분합니다. [출처: 교과서 58쪽]" },
+        { id: 39, type: "mcq", question: "파이썬 언어에서 if, for, while, def 등 블록 시작을 명시하기 위해 끝단에 기입하는 기호는?", options: ["샵(#)", "콜론(:)", "따옴표(')", "세미콜론(;)", "중괄호({})"], answerIndex: 1, explanation: "조건문이나 루프문 끝에는 항상 '콜론(:)' 기호를 표기해야 합니다. [출처: 교과서 58쪽]" },
+        { id: 40, type: "mcq", question: "파이썬 예약어(Reserved Words)에 관한 설명 중 가장 잘못된 기술은?", options: ["대소문자를 구별해야 한다.", "변수 이름으로 사용할 수 없다.", "개발자가 임의로 명칭을 변경할 수 있다.", "대부분 소문자로 구성된다.", "True, False, None은 대문자로 시작한다."], answerIndex: 2, explanation: "예약어는 시스템에 고정된 단어로 프로그래머가 임의로 명칭을 변경하거나 덮어쓸 수 없습니다. [출처: 교과서 58쪽]" },
+        { id: 41, type: "mcq", question: "대소문자를 구별하는 문법 특징에 따라 서로 완전히 다른 별개의 변수로 취급되는 예시는?", options: ["Age 와 age", "year 와 year", "True 와 True", "subject 와 'subject'", "#variable 와 variable"], answerIndex: 0, explanation: "파이썬은 대소문자를 정밀하게 구별하므로 Age와 age는 전혀 다른 변수입니다. [출처: 교과서 58쪽]" },
+        { id: 42, type: "mcq", question: "판다스 데이터프레임 변환 시 행 인덱스를 특정 기준 열로 설정하기 위한 전용 옵션 인자는?", options: ["marker", "figsize", "rotation", "@plt.plot", "index_col"], answerIndex: 4, explanation: "행 번호를 고유 식별 명칭으로 지정해 줄 때 사용하는 옵션은 'index_col'입니다. [출처: 교과서 79쪽]" },
+        { id: 43, type: "mcq", question: "파이썬에서 한 줄에 2개 이상의 명령을 연속으로 입력할 때 구분을 위해 사용하는 기호는?", options: ["샵(#)", "콜론(:)", "온점(.)", "세미콜론(;)", "큰따옴표(\")"], answerIndex: 3, explanation: "단일 라인에 복수 명령어를 병렬 배치하고 구분할 때 '세미콜론(;)'을 사용합니다. [출처: 교과서 79쪽]" },
+        { id: 44, type: "mcq", question: "수치화할 수 없는 데이터(예: 사과, 오렌지)를 정해진 카테고리에 따라 할당하는 지도 학습 기법은?", options: ["시각화", "전처리 가공", "회귀(Regression)", "군집화(Clustering)", "분류(Classification)"], answerIndex: 4, explanation: "이산적인 카테고리 형태에 매칭될 때 적용하는 연산 기법은 '분류(Classification)'입니다. [출처: 교과서 91쪽]" },
+        { id: 45, type: "mcq", question: "정답 없이 비슷한 특성을 가진 데이터끼리 그룹으로 묶는 기법(예: 수비수, 공격수 포지션 나누기)은?", options: ["회귀 분석", "강화 학습", "라벨링 전처리", "단층 퍼셉트론 분류", "군집화(Clustering)"], answerIndex: 4, explanation: "유사 특성을 가진 데이터 인스턴스들을 그룹화하는 기술은 '군집화(Clustering)'입니다. [출처: 교과서 113쪽]" },
+        { id: 46, type: "mcq", question: "뉴런의 동작 원리를 모방하여 만들어진 수학적 모델로 연결된 컴퓨팅 시스템의 총칭은?", options: ["크롤링 파싱망", "공공데이터 시스템", "스프레드시트 데이터", "들여쓰기 블록 구조", "인공 신경망(ANN)"], answerIndex: 4, explanation: "생물의 뉴런을 모방한 컴퓨팅 구축 시스템 총칭은 '인공 신경망(ANN)'입니다. [출처: 교과서 133쪽]" },
+        { id: 47, type: "mcq", question: "외부로부터 입력된 정보 신호를 수신하여 세포체로 전달하는 입력부 구조 잔가지의 명칭은?", options: ["핵", "축삭", "세포체", "수상 돌기(가지 돌기)", "시냅스(Synapse)"], answerIndex: 3, explanation: "외부 자극 신호를 핵으로 받아들이는 부위명은 '수상 돌기'입니다. [출처: 교과서 133쪽]" },
+        { id: 48, type: "mcq", question: "빅데이터를 결합하여 실시간으로 대화형 답변을 제공하는 혁신적인 금융 시스템 서비스는?", options: ["반도체 공정 이상 탐지", "자율 주행 이미지 분할", "뉴로모픽 연산 스케줄러", "스마트 금융 챗봇 시스템", "스프레드시트 정렬"], answerIndex: 3, explanation: "자연어 기반 챗봇 인터페이스를 제공하는 것은 '스마트 금융 챗봇 시스템'입니다. [출처: 교과서 143쪽]" },
+        { id: 49, type: "mcq", question: "대규모 계산을 고속화하기 위해 수천 개의 코어를 탑재하여 병렬 연산 효율성이 높은 하드웨어 장치는?", options: ["정밀 센서 제어기", "동기식 라우팅 칩", "임베디드 메모리", "중앙 처리 장치(CPU)", "그래픽 처리 장치(GPU)"], answerIndex: 4, explanation: "행렬 텐서 병렬 계산을 처리하는 전용 가속 하드웨어 칩셋은 'GPU'입니다. [출처: 교과서 147쪽]" },
+        { id: 50, type: "mcq", question: "CPU(중앙 처리 장치)가 가지는 고유한 설계 및 아키텍처적 특징을 가장 바르게 설명한 것은?", options: ["수천 개의 코어로 다차원 행렬을 병렬 연산한다.", "순주소 기반 단일 연산 회로로 기능한다.", "수천 개의 산술 장치(ALU)로 구성된다.", "딥러닝 알고리즘 연산 전용 가속칩이다.", "구조적 범용성과 유연성을 바탕으로 시스템 관리를 총괄한다."], answerIndex: 4, explanation: "CPU는 100개 미만의 고성능 범용 코어로 유연성 있게 시스템 관리를 총괄합니다. [출처: 교과서 147쪽]" },
+        
+        // --- 51~60번 서술형/단답형 문항 ---
+        { id: 51, type: "short", question: "[서술형] 기계학습과 딥러닝을 구분하는 가장 결정적 기준인 '사람의 개입 여부 및 특징 추출 방식'의 차이를 서술하시오.", keywords: [["특징"], ["추출"], ["자동", "사람", "개입"]], explanation: "기계학습은 사람이 직접 특징(Feature)을 도출해야 하지만, 딥러닝은 신경망이 사람 개입 없이 특징 추출 과정을 자동화하여 스스로 해결합니다. [출처: 교과서 13쪽]" },
+        { id: 52, type: "short", question: "[단답형] 다층 퍼셉트론 내부에서 연산 신호 총합을 비선형 변환하여 최종 출력 여부를 결정해주는 수학적 함수의 총칭은?", keywords: [["활성화"]], explanation: "입력 신호의 가중치 합을 변환하여 다음 출력 여부를 결정하는 함수를 '활성화 함수(Activation Function)'라고 합니다. [출처: 교과서 184쪽]" },
+        { id: 53, type: "short", question: "[단답형] 초기 단층 퍼셉트론 알고리즘이 해결하지 못해 인공지능 역사에 암흑기를 가져왔던 배타적 논리합 연산의 명칭은?", keywords: [["xor", "배타적"]], explanation: "직선 하나로는 모순 관계를 분리할 수 없었던 배타적 논리합 문제는 'XOR 연산'입니다. [출처: 교과서 184쪽]" },
+        { id: 54, type: "short", question: "[단답형] 모델이 스스로 갱신하는 매개변수와 달리, 설계자가 직관이나 경험을 통해 직접 설정해야 하는 고유값 변수를 무엇이라 하는가?", keywords: [["하이퍼"]], explanation: "은닉층 개수, 학습률처럼 사람이 수동으로 설정해 주어야 하는 변수를 '하이퍼 파라미터(Hyperparameter)'라고 합니다. [출처: 교과서 184쪽]" },
+        { id: 55, type: "short", question: "[단답형] 1989년 얀 르쿤이 제안하여 문자 수치 이미지를 인식하는 데 성공한 최초의 상징적인 합성곱 신경망 모델 명칭은?", keywords: [["lenet", "르넷", "르네"]], explanation: "수표 등 문자 인식에 큰 성과를 거둔 상징적인 초기 CNN 구조 명칭은 'LeNet(또는 LeNet-5)'입니다. [출처: 교과서 13/184쪽]" },
+        { id: 56, type: "short", question: "[단답형] 생물학적 뉴런이나 인공 뉴런에서 누적된 전기 신호치가 급격한 상태 전환 및 발사를 유도하는 특정한 경계 기준값을 무엇이라 하는가?", keywords: [["임계값", "threshold"]], explanation: "특정 레벨 도달 시 신호 발사를 유도하는 물리적 경계 한계치를 '임계값(Threshold)'이라고 합니다. [출처: 교과서 133쪽]" },
+        { id: 57, type: "short", question: "[단답형] 인공지능이 생성하는 편견, 차별, 가짜뉴스를 예방하기 위해 정보 사회 개발자와 사용자가 필수적으로 갖춰야 할 내면적 역량은?", keywords: [["윤리"]], explanation: "데이터 편향성이나 왜곡된 정보 생산을 조심하고 규제하는 도덕적 의식을 '직업 윤리(윤리적 의식)'라고 합니다. [출처: 교과서 28/185쪽]" },
+        { id: 58, type: "short", question: "[단답형] 공공 기관이 사회 이익을 목적으로 수집하여 다운로드나 Open API 형태로 제공하는 데이터 자원의 명칭은?", keywords: [["공공"]], explanation: "정부 및 공공 기관이 개방하여 표준 제공하는 원본 정보 자원은 '공공데이터'입니다. [출처: 교과서 87쪽]" },
+        { id: 59, type: "short", question: "[단답형] 파이썬 판다스(Pandas) 라이브러리에서 1차원 선형 배열 구조와 2차원 매트릭스 형태 구조의 명칭을 차례로 쓰시오.", keywords: [["시리즈"], ["데이터프레임"]], explanation: "1차원 단일 인덱스 배열은 '시리즈(Series)', 행렬 형태의 2차원 배열은 '데이터프레임(DataFrame)'입니다. [출처: 교과서 87쪽]" },
+        { id: 60, type: "short", question: "[서술형] CNN의 외곽 경계 특징 소실 문제를 막는 (1) 기법과, RNN의 장기 의존성 정보 소실을 해결하는 (2) 변형 모델 명칭을 쓰시오.", keywords: [["패딩"], ["lstm", "순환"]], explanation: "(1) 외곽선 주변을 0 등의 값으로 감싸는 '패딩(Padding)' 기법, (2) 게이트 구조를 결합해 정보를 유지하는 'LSTM' 모델입니다. [출처: 교과서 185쪽]" }
+    ];
+
+    const app = {
+        currentList: [],
+        currentIndex: 0,
+        userAnswers: {}, 
+        checkedQuestions: new Set(),
+        isRetryMode: false,
+
+        switchView(viewId) {
+            document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+        },
+
+        showModeSelect() {
+            this.switchView('modeSelectView');
+        },
+
+        showConfirmDialog() {
+            document.getElementById('confirmDialogOverlay').classList.add('active');
+        },
+
+        closeConfirmDialog() {
+            document.getElementById('confirmDialogOverlay').classList.remove('active');
+        },
+
+        resetApp() {
+            this.closeConfirmDialog();
+            this.currentList = [];
+            this.currentIndex = 0;
+            this.userAnswers = {};
+            this.checkedQuestions.clear();
+            this.isRetryMode = false;
+            
+            const input = document.getElementById('shortAnswerInput');
+            input.value = '';
+            input.classList.remove('is-correct', 'is-wrong');
+            
+            this.switchView('welcomeView');
+        },
+
+        startQuiz(mode) {
+            let targetDB = [];
+
+            if (mode === 'all') {
+                targetDB = [...quizDatabase];
+            } else if (mode === 'short') {
+                targetDB = quizDatabase.filter(q => q.type === 'short');
+            } else {
+                let limit = parseInt(mode);
+                const mcqOnly = quizDatabase.filter(q => q.type === 'mcq');
+                const shuffled = mcqOnly.sort(() => 0.5 - Math.random());
+                targetDB = shuffled.slice(0, limit);
+            }
+            
+            this.currentList = targetDB.sort((a, b) => a.id - b.id);
+            
+            this.currentIndex = 0;
+            this.userAnswers = {};
+            this.checkedQuestions.clear();
+            this.isRetryMode = false;
+            
+            this.switchView('quizView');
+            this.renderQuestion();
+        },
+
+        startRetryMode() {
+            const wrongIds = Object.keys(this.userAnswers).filter(id => {
+                const q = this.currentList.find(item => item.id == id);
+                if(q.type === 'mcq') {
+                    return this.userAnswers[id] !== q.answerIndex;
+                } else {
+                    return !this.isShortAnswerCorrect(this.userAnswers[id], q);
+                }
+            });
+
+            this.currentList = this.currentList.filter(q => wrongIds.includes(String(q.id)));
+            
+            this.currentIndex = 0;
+            this.currentList.forEach(q => delete this.userAnswers[q.id]);
+            this.checkedQuestions.clear();
+            this.isRetryMode = true;
+            
+            this.switchView('quizView');
+            this.renderQuestion();
+        },
+
+        renderQuestion() {
+            const q = this.currentList[this.currentIndex];
+            
+            document.getElementById('qNumber').innerText = `Q${this.currentIndex + 1}.`;
+            document.getElementById('currentQNum').innerText = this.currentIndex + 1;
+            document.getElementById('totalQNum').innerText = this.currentList.length;
+            
+            const progressPercent = ((this.currentIndex) / this.currentList.length) * 100;
+            document.getElementById('progressBar').style.width = `${progressPercent}%`;
+
+            document.getElementById('questionText').innerText = `[원본 ${q.id}번] ${q.question}`;
+
+            const optContainer = document.getElementById('optionsContainer');
+            const shortContainer = document.getElementById('shortAnswerContainer');
+            const shortInput = document.getElementById('shortAnswerInput');
+            
+            optContainer.innerHTML = '';
+            
+            const currentAnswer = this.userAnswers[q.id];
+            const isChecked = this.checkedQuestions.has(q.id);
+
+            if(q.type === 'mcq') {
+                optContainer.style.display = 'flex';
+                shortContainer.style.display = 'none';
+                
+                q.options.forEach((optText, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'option-btn word-break-syllable';
+                    btn.innerText = `${index + 1}. ${optText}`;
+                    
+                    if (isChecked) {
+                        btn.classList.add('disabled');
+                        // 1. 실제 정답인 경우 (밝은 하늘색으로 강조)
+                        if (index === q.answerIndex) {
+                            btn.classList.add('is-correct-anim');
+                        } 
+                        // 2. 내가 선택했지만 오답인 경우 (붉은색 계열로 흔들리며 표시)
+                        else if (currentAnswer === index) {
+                            btn.classList.add('is-wrong-anim');
+                        }
+                    } else {
+                        // 확인 전 내가 선택한 항목
+                        if (currentAnswer === index) {
+                            btn.classList.add('selected');
+                        }
+                        btn.onclick = () => this.selectOption(index);
+                    }
+                    optContainer.appendChild(btn);
+                });
+            } else {
+                optContainer.style.display = 'none';
+                shortContainer.style.display = 'flex';
+                
+                shortInput.value = currentAnswer || '';
+                shortInput.classList.remove('is-correct', 'is-wrong');
+                shortInput.disabled = isChecked;
+                
+                if(isChecked) {
+                    if(this.isShortAnswerCorrect(currentAnswer, q)) {
+                        shortInput.classList.add('is-correct');
+                    } else {
+                        shortInput.classList.add('is-wrong');
+                    }
+                }
+
+                shortInput.oninput = (e) => {
+                    this.userAnswers[q.id] = e.target.value;
+                };
+            }
+
+            const checkBtn = document.getElementById('checkAnswerBtn');
+            const explBtn = document.getElementById('viewExplanationBtn');
+            const explBox = document.getElementById('explanationBox');
+            
+            explBox.innerText = q.explanation;
+            explBox.classList.remove('show');
+
+            if (isChecked) {
+                checkBtn.style.display = 'none';
+                explBtn.style.display = 'flex';
+            } else {
+                checkBtn.style.display = 'flex';
+                explBtn.style.display = 'none';
+            }
+
+            document.getElementById('backBtn').disabled = (this.currentIndex === 0);
+            document.getElementById('backBtn').style.opacity = (this.currentIndex === 0) ? 0.5 : 1;
+            
+            const nextBtn = document.getElementById('nextBtn');
+            if (this.currentIndex === this.currentList.length - 1) {
+                nextBtn.innerText = '결과 보기';
+                nextBtn.className = 'btn btn-primary';
+            } else {
+                nextBtn.innerText = '다음';
+                nextBtn.className = 'btn btn-secondary btn-next'; 
+            }
+        },
+
+        selectOption(index) {
+            const q = this.currentList[this.currentIndex];
+            this.userAnswers[q.id] = index;
+            this.renderQuestion();
+        },
+
+        isShortAnswerCorrect(userInput, q) {
+            if(!userInput) return false;
+            const str = userInput.replace(/\s+/g, '').toLowerCase();
+            return q.keywords.every(group => group.some(kw => str.includes(kw.toLowerCase())));
+        },
+
+        checkImmediateAnswer() {
+            const q = this.currentList[this.currentIndex];
+            
+            if (this.userAnswers[q.id] === undefined) {
+                this.userAnswers[q.id] = (q.type === 'mcq') ? null : '';
+            }
+            
+            this.checkedQuestions.add(q.id);
+            this.renderQuestion();
+        },
+
+        toggleExplanation() {
+            const explBox = document.getElementById('explanationBox');
+            explBox.classList.toggle('show');
+        },
+
+        nextQuestion() {
+            if (this.currentIndex < this.currentList.length - 1) {
+                this.currentIndex++;
+                this.renderQuestion();
+            } else {
+                this.showResults();
+            }
+        },
+
+        prevQuestion() {
+            if (this.currentIndex > 0) {
+                this.currentIndex--;
+                this.renderQuestion();
+            }
+        },
+
+        skipQuestion() {
+            const q = this.currentList[this.currentIndex];
+            if (this.userAnswers[q.id] === undefined) {
+                this.userAnswers[q.id] = (q.type === 'mcq') ? null : ''; 
+            }
+            this.nextQuestion();
+        },
+
+        showResults() {
+            document.getElementById('progressBar').style.width = '100%';
+            
+            let correctCount = 0;
+            let wrongCount = 0;
+
+            this.currentList.forEach(q => {
+                let isCorrect = false;
+                if(q.type === 'mcq') {
+                    isCorrect = (this.userAnswers[q.id] === q.answerIndex);
+                } else {
+                    isCorrect = this.isShortAnswerCorrect(this.userAnswers[q.id], q);
+                }
+
+                if (isCorrect) correctCount++;
+                else wrongCount++;
+            });
+
+            const score = Math.round((correctCount / this.currentList.length) * 100);
+
+            document.getElementById('scoreCircle').style.background = `conic-gradient(var(--primary) ${score}%, rgba(255,255,255,0.1) 0%)`;
+            
+            let currentScore = 0;
+            const scoreEl = document.getElementById('scoreText');
+            const interval = setInterval(() => {
+                if (currentScore >= score) {
+                    clearInterval(interval);
+                    scoreEl.innerHTML = `${score}<span>점</span>`;
+                } else {
+                    currentScore += Math.ceil(score / 20) || 1;
+                    if(currentScore > score) currentScore = score;
+                    scoreEl.innerHTML = `${currentScore}<span>점</span>`;
+                }
+            }, 30);
+
+            const msgEl = document.getElementById('resultMessage');
+            if (score === 100) {
+                msgEl.innerText = "완벽합니다! 목표를 훌륭히 달성했습니다.";
+                msgEl.style.color = "var(--correct)";
+            } else if (score >= 70) {
+                msgEl.innerText = "잘하셨습니다! 부족한 부분을 해설과 함께 복습해 보세요.";
+                msgEl.style.color = "var(--primary)";
+            } else {
+                msgEl.innerText = "포기하지 마세요. 오답 노트를 적극 활용하여 점검해 보세요.";
+                msgEl.style.color = "var(--wrong)";
+            }
+
+            const retryBtn = document.getElementById('retryWrongBtn');
+            if (wrongCount > 0) {
+                retryBtn.style.display = 'flex';
+                retryBtn.innerText = `틀린 문제 다시 풀기 (${wrongCount}문항)`;
+            } else {
+                retryBtn.style.display = 'none';
+            }
+
+            this.switchView('resultView');
+        }
+    };
+</script>
+</body>
+</html>

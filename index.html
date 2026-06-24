@@ -155,14 +155,13 @@
         .mode-select-view h2 { font-size: 2rem; margin: 0 0 15px 0; line-height: 1.3; }
         .mode-select-view p { color: var(--text-dim); line-height: 1.5; margin-bottom: 30px; font-size: 0.95rem; }
         
-        /* 5. 문항 선택 버튼 5개 레이아웃 최적화 */
+        /* 문항 선택 버튼 레이아웃 최적화 */
         .mode-selection { 
             display: grid; 
             grid-template-columns: 1fr 1fr; 
             gap: 12px; 
             width: 100%; 
         }
-        /* 마지막 홀수번째 버튼(모두 풀기)을 중앙에 꽉 채우기 */
         .mode-selection button:last-child {
             grid-column: span 2;
         }
@@ -173,6 +172,7 @@
             background: transparent; border: 1px solid var(--text-dim); color: var(--text-dim);
             padding: 6px 10px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
         }
+        .btn-home:hover { border-color: var(--primary); color: var(--primary); }
         .q-number-box { display: flex; align-items: baseline; gap: 8px; }
         .q-number { font-size: 1.6rem; font-weight: 800; color: var(--primary); margin: 0; }
         .progress-text { color: var(--text-dim); font-weight: 600; font-size: 0.85rem; }
@@ -196,7 +196,7 @@
             background: rgba(0,0,0,0.2); padding: 18px; border-radius: 12px;
             margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;
         }
-        /* 4. 표/리스트 문항 완벽 지원을 위해 줄바꿈(pre-wrap) 속성 추가 */
+        /* 표/리스트 문항 완벽 지원을 위해 줄바꿈(pre-wrap) 속성 추가 */
         .question-text { 
             font-size: 1.1rem; line-height: 1.5; margin: 0; 
             white-space: pre-wrap; 
@@ -213,7 +213,11 @@
             text-align: left; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; line-height: 1.3;
         }
         
-        .option-btn.selected { background: rgba(34, 211, 238, 0.1); border-color: var(--primary); color: var(--primary); }
+        .option-btn.selected { 
+            background: rgba(34, 211, 238, 0.1); 
+            border-color: var(--primary); 
+            color: var(--primary); 
+        }
         
         @keyframes correctPop {
             0%   { transform: scale(1); }
@@ -375,8 +379,6 @@
 
 <script>
     // [객관식 70 + 서술형 10 = 총 80문항]
-    // 2. [교과서 **쪽]은 문항에서 완벽하게 제외했습니다. 해설에만 표시됩니다.
-    // 1. 선지의 인위적 길이 정렬이나 순서 변경 없이 원본 PDF에 나온 순서 그대로 100% 반영했습니다.
     const quizDatabase = [
         { id: 1, type: "mcq", question: "시각, 학습, 추론 등 인간의 지능을 컴퓨터가 모방하여 실행하도록 구현하는 모든 기술을 의미하는 용어는?", options: ["인공지능(AI)", "자동 제어 기술", "일괄 처리 구조", "임베디드 프로세싱", "유비쿼터스 시스템"], answerIndex: 0, explanation: "인간의 지능을 컴퓨터가 모방하여 실행하도록 구현하는 모든 기술을 '인공지능(AI)'이라고 명시하고 있습니다. [출처: 교과서 9쪽]" },
         { id: 2, type: "mcq", question: "1956년 미국 다트머스 대학교에서 열린 회의에서 '인공지능(Artificial Intelligence)'이라는 용어를 처음으로 제안한 인물은?", options: ["얀르쿤(Yann LeCun)", "존 매카시(John McCarthy)", "마빈 민스키(Marvin Minsky)", "제프리 힌턴(Geoffrey Hinton)", "프랭크 로젠블랫(Frank Rosenblatt)"], answerIndex: 1, explanation: "1956년 미국 다트머스 대학교 회의에서 존 매카시 교수가 인공지능 용어를 최초로 제안하였습니다. [출처: 교과서 9쪽]" },
@@ -391,7 +393,7 @@
         { id: 11, type: "mcq", question: "단층 퍼셉트론 중간에 은닉층(Hidden Layer)을 추가하여 다층 퍼셉트론을 구성하고, 나아가 은닉층을 2개 이상 추가하여 복잡한 패턴을 다루도록 제안된 신경망 구조는?", options: ["이진 회로망", "단층 분류망", "임베디드 시퀀스망", "심층 신경망(DNN)", "순환 신경망(RNN)"], answerIndex: 3, explanation: "은닉층을 다수 추가하여 복잡한 패턴을 다루게 만든 모델을 '심층 신경망(DNN)'이라고 지칭합니다. [출처: 교과서 13쪽]" },
         { id: 12, type: "mcq", question: "얀 르쿤이 제안한 모델을 거쳐 2012년에 등장하였으며, 연산을 통해 이미지에서 필요한 특징을 스스로 학습할 수 있는 능력을 갖추어 이미지 분류 작업에 널리 사용되기 시작한 신경망 구조는?", options: ["확률 통계망", "단층 퍼셉트론", "순환 신경망(RNN)", "합성곱 신경망(CNN)", "데이터 시각화 프레임워크"], answerIndex: 3, explanation: "알렉스넷 등과 함께 이미지 분류 작업에 본격적으로 활용된 기술은 '합성곱 신경망(CNN)'입니다. [출처: 교과서 13쪽]" },
         { id: 13, type: "mcq", question: "공개와 동시에 큰 인기를 얻었으며, 소프트웨어 개발 시 편의성을 제공하는 자주 사용하는 부분 프로그램들의 모임이자 현재 가장 널리 사용되는 G사의 대표적인 딥러닝 라이브러리는?", options: ["Pandas", "Python", "Open API", "Matplotlib", "TensorFlow"], answerIndex: 4, explanation: "G사가 대중에 공개하여 가장 널리 사용되는 딥러닝 라이브러리는 '텐서플로(TensorFlow)'입니다. [출처: 교과서 13쪽]" },
-        { id: 14, type: "mcq", question: "기계학습과 딥러닝은 모두 데이터를 분류하고 특징을 추출하는 기술이다. 교과서 13쪽에서 명시한 두 기술의 가장 결정적인 차이점은?", options: ["프로그래밍 언어의 종류", "연산 속도의 물리적 한계", "사용하는 데이터의 크기 차이", "하드웨어 메모리의 제약 조건", "사람의 개입 여부(특징 추출 자동화 여부)"], answerIndex: 4, explanation: "두 기술의 가장 큰 차이점은 특징 추출 자동화 여부, 즉 '사람의 물리적 개입 여부'입니다. [출처: 교과서 13쪽]" },
+        { id: 14, type: "mcq", question: "기계학습과 딥러닝은 모두 데이터를 분류하고 특징을 추출하는 기술이다. 교과서에서 명시한 두 기술의 가장 결정적인 차이점은?", options: ["프로그래밍 언어의 종류", "연산 속도의 물리적 한계", "사용하는 데이터의 크기 차이", "하드웨어 메모리의 제약 조건", "사람의 개입 여부(특징 추출 자동화 여부)"], answerIndex: 4, explanation: "두 기술의 가장 큰 차이점은 특징 추출 자동화 여부, 즉 '사람의 물리적 개입 여부'입니다. [출처: 교과서 13쪽]" },
         { id: 15, type: "mcq", question: "운전자의 조작 없이 자동차가 스스로 주변 환경을 인식하고 판단하여 주행하는 자동차를 의미하는 용어는?", options: ["이진 제어 차량", "자동 수송 공정", "원격 제어 자동차", "자율 주행 자동차", "가상 셔틀 시스템"], answerIndex: 3, explanation: "운전자 없이 스스로 판단 주행이 가능한 차량을 '자율 주행 자동차'라고 부릅니다. [출처: 교과서 23쪽]" },
         { id: 16, type: "mcq", question: "자율 주행 자동차의 기술 요소 중, 레이저 레이더를 주변에 발사하고 반사되어 돌아오는 신호를 측정함으로써 주변의 3차원 도로 정보를 얻는 센서 장치는?", options: ["GPS", "초음파 센서", "적외선 센서", "라이다(LiDAR)", "관성 항법 장치(INS)"], answerIndex: 3, explanation: "레이저를 이용해 주변 환경 및 도로 정보를 정밀하게 획득하는 장치는 '라이다(LiDAR)'입니다. [출처: 교과서 23쪽]" },
         { id: 17, type: "mcq", question: "자율 주행 자동차가 차량 혹은 도로 인프라 간 실시간 통신하기 위한 핵심 기술 요소는?", options: ["파싱 트리", "HD Map", "V2X 통신", "라벨링 시스템", "들여쓰기 블록"], answerIndex: 2, explanation: "차량이 외부 환경과 초고속 교신을 수행하는 무선 안테나 연결 모듈은 'V2X 통신'입니다. [출처: 교과서 23쪽]" },
@@ -444,7 +446,7 @@
         { id: 64, type: "mcq", question: "파이썬 matplotlib 라이브러리 차트 제어 메서드 중, 차트의 크기와 가로·세로 인치(inch) 길이 값을 제어해주는 전용 옵션 인자는?", options: ["marker", "figsize", "rotation", "plt.show", "index_col"], answerIndex: 1, explanation: "출력될 차트(figure)의 물리적 크기를 조정하는 옵션 인자는 'figsize'입니다. [출처: 교과서 79쪽]" },
         { id: 65, type: "mcq", question: "파이썬 코드 작성 시 한 줄 영역 내부에 2개 이상의 독립 제어 명령을 연달아 입력하고자 배치할 때 명령을 구분해주는 문장부호는?", options: [":", "#", ";", ".", "\""], answerIndex: 2, explanation: "한 줄에 여러 파이썬 명령어를 연달아 실행할 때는 구분 기호로 '세미콜론(;)'을 씁니다. [출처: 교과서 79쪽]" },
         { id: 66, type: "mcq", question: "생물학적 뉴런의 세포체 핵이 외부 가지 돌기로부터 주입받은 전기 신호를 분석하여 다음 시냅스로 전달할지 결정하는 절대 경계선 기준 상태값은?", options: ["가중치", "임계값", "오차 역전파", "은닉층 매개변수", "하이퍼 파라미터"], answerIndex: 1, explanation: "신호 전달 여부를 결정하는 경계 기준치를 '임계값(Threshold)'이라고 합니다. [출처: 교과서 133쪽]" },
-        { id: 67, type: "mcq", question: "전통적 은행 서비스를 모바일 앱, 빅데이터 분석, 인공지능 기술의 유기적 결합을 통해 생존과 생태계 변화를 이끄는 핵심 금융 시스템 명칭은?", options: ["핀테크 가상 뱅킹", "마이 페이먼트 구조", "스마트 금융 시스템", "오픈뱅킹 마이데이터망", "디지털 네이티브 플랫폼"], answerIndex: 2,传统 은행 업무를 스마트폰과 AI 기술로 고도화한 서비스는 '스마트 금융 시스템'입니다. [출처: 교과서 143쪽]" },
+        { id: 67, type: "mcq", question: "전통적 은행 서비스를 모바일 앱, 빅데이터 분석, 인공지능 기술의 유기적 결합을 통해 생존과 생태계 변화를 이끄는 핵심 금융 시스템 명칭은?", options: ["핀테크 가상 뱅킹", "마이 페이먼트 구조", "스마트 금융 시스템", "오픈뱅킹 마이데이터망", "디지털 네이티브 플랫폼"], answerIndex: 2, explanation: "전통적인 은행 업무를 스마트폰과 AI 기술로 고도화한 서비스는 '스마트 금융 시스템'입니다. [출처: 교과서 143쪽]" },
         { id: 68, type: "mcq", question: "제조 현장의 매우 높은 신뢰도, 정밀성, 실시간성을 요구하며 제품 기획, 설계, 생산 등 전 영역에 인공지능 기술을 결합하는 첨단화된 제조 공장 생태계는?", options: ["스마트 팩토리", "온라인 머신러닝 공장", "오토 인코더 엔지니어링", "RTM 반도체 이상 탐지망", "온실가스 배출 최적화 제조소"], answerIndex: 0, explanation: "제품 기획부터 생산 전 과정에 AI를 결합한 자동화 공장을 '스마트 팩토리'라고 합니다. [출처: 교과서 147쪽]" },
         { id: 69, type: "mcq", question: "합성곱 신경망(CNN) 학습 도중 국부 수용 영역을 차례로 스캔할 때, 이미지의 외곽 경계선 부분의 특징점 소실 데이터를 보완하기 위해 주변을 채워 넣는 기법은?", options: ["패딩(Padding)", "풀링(Pooling)", "파싱(Parsing)", "라벨링(Labeling)", "들여쓰기(Indentation)"], answerIndex: 0, explanation: "외곽 데이터의 손실을 방지하기 위해 0 등의 값으로 테두리를 덧대는 것을 '패딩(Padding)'이라 합니다. [출처: 교과서 185쪽]" },
         { id: 70, type: "mcq", question: "복잡하게 설계된 인공지능 지능정보 알고리즘 기법들이 유발할 수 있는 부당한 잠재적 차별 영향력을 미리 예측하기 어려운 현실적 한계 요인은 무엇인가?", options: ["지나친 기기 오작동 상태", "수동적인 데이터 전처리 가공", "관계형 데이터베이스 관리의 복잡성", "인간의 지나친 신뢰와 불충분한 비판 경향", "들여쓰기(Indent) 규칙 통일성의 부재"], answerIndex: 3, explanation: "AI가 생성하는 결과물을 무비판적으로 지나치게 신뢰하는 경향이 기술적 위험 예측을 어렵게 만듭니다. [출처: 교과서 34쪽]" },
